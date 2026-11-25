@@ -525,6 +525,7 @@ export class KuroCatEngine3D {
   private readonly scene = new THREE.Scene();
   private readonly camera: THREE.PerspectiveCamera;
   private readonly desk: KeyboardAndMouse3D;
+  private readonly personalDesk: boolean;
   private readonly furSystem = new FurShaderSystem();
 
   private readonly catRoot = new THREE.Group();
@@ -796,12 +797,13 @@ export class KuroCatEngine3D {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     this.camera = new THREE.PerspectiveCamera(22, 1.35, 0.1, 100);
-    this.desk = new KeyboardAndMouse3D(this.scene, options?.personalDesk);
+    this.personalDesk = Boolean(options?.personalDesk);
+    this.desk = new KeyboardAndMouse3D(this.scene, this.personalDesk);
     this.pawMat = this.furSystem.createMaterial('PAW');
 
     // 1) Original KuroCat Continuous One-Piece Mochi-Pear Silhouette (exact BODY_SLICES proportions!)
     this.catRoot.position.copy(this.homePos);
-    this.catRoot.scale.setScalar(0.90);
+    this.catRoot.scale.set(0.90, this.personalDesk ? 0.78 : 0.90, 0.90);
     this.scene.add(this.catRoot);
 
     // Soft studio contact shadow underneath the plush sitting body
@@ -829,7 +831,7 @@ export class KuroCatEngine3D {
         [0.76, 0.67], // plump belly
         [0.68, 0.91], // mid chest
         [0.60, 1.12], // upper chest
-        [0.57, 1.32], // gentle plush neck (NO skinny KeyCat neck!)
+        [this.personalDesk ? 0.61 : 0.57, 1.32], // neck blends into the cheeks
         [0.65, 1.50], // chubby cheeks widest
         [0.61, 1.69], // eye line
         [0.52, 1.87], // forehead
@@ -865,7 +867,7 @@ export class KuroCatEngine3D {
     for (const s of [-1, 1] as const) {
       const hp = new THREE.Mesh(pawGeo, this.pawMat);
       hp.scale.set(0.185, 0.11, 0.165);
-      hp.position.set(s * 0.56, 0.065, 0.34);
+      hp.position.set(s * 0.56, 0.065, this.personalDesk ? 0.23 : 0.34);
       hp.rotation.y = s * 0.24;
       this.catRoot.add(hp);
     }
@@ -946,7 +948,7 @@ export class KuroCatEngine3D {
       const g = new THREE.Group();
       g.position.set(s * 0.295, 0.255, -0.015);
       g.rotation.set(-0.06, 0, -s * 0.06);
-      g.scale.set(1.0, 1.04, 1.0);
+      g.scale.set(1.0, this.personalDesk ? 1.22 : 1.04, 1.0);
       const mesh = new THREE.Mesh(earGeo, this.furSystem.createMaterial('EAR', s));
       mesh.scale.set(1, 1, 0.56);
       g.add(mesh);
@@ -1112,7 +1114,9 @@ export class KuroCatEngine3D {
         paw,
         tuckArc,
         // Cozy mid-lower plush flank shoulder (matches approved 2D 0.65/±43 proportions — shorter, cuter arms!)
-        shoulderLocal: new THREE.Vector3(s * 0.54, 0.78, 0.22),
+        shoulderLocal: this.personalDesk
+          ? new THREE.Vector3(s * 0.50, 0.56, 0.40)
+          : new THREE.Vector3(s * 0.54, 0.78, 0.22),
         shoulder: new THREE.Vector3(),
         c1: new THREE.Vector3(),
         c2: new THREE.Vector3(),
@@ -1610,9 +1614,10 @@ export class KuroCatEngine3D {
     this.tuckLineMat.color.set(p.isDarkFur ? '#b2b8c4' : '#7b6e64');
     this.tuckLineMat.opacity = p.isDarkFur ? 0.36 : 0.24;
 
-    this.faceGroup.visible = Boolean(p.nose);
-    if (p.nose) this.noseMat.color.set(p.nose);
-    if (p.mouth) this.mouthMat.color.set(p.mouth);
+    const charcoalFace = this.personalDesk && skin.id === 'black';
+    this.faceGroup.visible = Boolean(p.nose) || charcoalFace;
+    this.noseMat.color.set(p.nose || '#72656b');
+    this.mouthMat.color.set(p.mouth || '#666068');
 
     const lashCol = p.isDarkFur ? '#0b0c10' : p.lid;
     for (const e of this.eyes) {
@@ -2256,7 +2261,7 @@ export class KuroCatEngine3D {
           : null;
 
     let targetShift = 0;
-    if (mousing) targetShift = -0.24;
+    if (mousing) targetShift = this.personalDesk ? -0.13 : -0.24;
     else if (striking && striking.keyId) {
       const kt = this.desk.keyTopWorld(striking.keyId, this.tmpV1);
       targetShift = clamp((kt.x - 0.14) * 0.15, -0.22, 0.22);
@@ -2281,6 +2286,8 @@ export class KuroCatEngine3D {
     // 5) Head pose & silky eye tracking
     const gx = Math.tanh(this.cursorNdc.x * 1.45);
     const gy = Math.tanh(this.cursorNdc.y * 1.35);
+    const cursorOutside = this.lastCursorRelX < 0 || this.lastCursorRelX > 1 ||
+      this.lastCursorRelY < 0 || this.lastCursorRelY > 1;
     const lookCursor = t - this.cursorActiveAt < 2.5;
 
     let targetYaw = 0;
@@ -2297,10 +2304,17 @@ export class KuroCatEngine3D {
       targetYaw = this.petX * 0.16;
       targetPitch = -0.10;
       targetRoll = Math.sin(this.rub) * 0.14;
+    } else if (this.personalDesk && mousing && cursorOutside) {
+      // An off-window pointer moves the desk mouse; glance at the paw operating it.
+      targetYaw = -0.11;
+      targetPitch = 0.015;
+      targetRoll = -0.025;
+      targetGazeX = -0.34;
+      targetGazeY = -0.44;
     } else if (lookCursor && (curiousNow || t - this.lastKey > 0.65)) {
       targetYaw = gx * (0.20 + curious * 0.14);
       targetPitch = -0.04 - gy * 0.14;
-      targetRoll = gx * (0.05 + curious * 0.13);
+      targetRoll = gx * (this.personalDesk ? 0.07 : 0.05 + curious * 0.13);
       targetGazeX = gx;
       targetGazeY = gy;
     } else if (striking && striking.keyId) {
@@ -2411,8 +2425,8 @@ export class KuroCatEngine3D {
       e.squintSlit.visible = isPetSquint;
 
       if (showOpenEye) {
-        const irisRx = 0.156 * (1 + curious * 0.06);
-        const irisRy = Math.max(0.02, 0.136 * (1 + curious * 0.09) * (1 - blinkClose * 0.8));
+        const irisRx = (this.personalDesk ? 0.138 : 0.156) * (1 + curious * 0.06);
+        const irisRy = Math.max(0.02, (this.personalDesk ? 0.117 : 0.136) * (1 + curious * 0.09) * (1 - blinkClose * 0.8));
 
         const pRx = clamp(
           (0.064 + curious * 0.048 + this.excite * 0.008) * (1 - cross * 0.32),
@@ -2432,7 +2446,7 @@ export class KuroCatEngine3D {
         (e.mat.uniforms.uPupilRad.value as THREE.Vector2).set(pRx / irisRx, pRy / irisRy);
         e.mat.uniforms.uCross.value = cross;
         e.mat.uniforms.uCurious.value = curious;
-        e.mat.uniforms.uShineAmt.value = shineAmt;
+        e.mat.uniforms.uShineAmt.value = this.personalDesk ? shineAmt * 0.62 : shineAmt;
       }
     }
 
@@ -2510,10 +2524,12 @@ export class KuroCatEngine3D {
     const updatePaw = (paw: PawTrack3D, isLeft: boolean) => {
       const activeForMouse = isLeft && mousing;
       const activeForKey = Boolean(paw.keyId && (paw.down || t - paw.t0 < 0.52)) && !this.asleep && !this.privacyMode;
-      const wantTuck = !activeForMouse && !activeForKey ? 1 : 0;
+      const restOnBoard = this.personalDesk && mousing && !isLeft && !activeForKey;
+      const wantTuck = !activeForMouse && !activeForKey && !restOnBoard ? 1 : 0;
       paw.tuckWeight += (wantTuck - paw.tuckWeight) * approach(wantTuck ? 6.5 : 22, dt);
 
-      this.tmpPawLocal.set(paw.side * 0.24, 0.16 - this.sleepAmt * 0.06, 0.54);
+      if (this.personalDesk) this.tmpPawLocal.set(paw.side * 0.30, 0.27 - this.sleepAmt * 0.06, 0.65);
+      else this.tmpPawLocal.set(paw.side * 0.24, 0.16 - this.sleepAmt * 0.06, 0.54);
       const tuckHome = this.attachLocal(this.tmpPawLocal, this.tmpV3);
 
       if (activeForMouse) {
@@ -2539,7 +2555,13 @@ export class KuroCatEngine3D {
       }
 
       // Smoothly tuck sleek paws onto front tummy above the keyboard when calm/idle!
-      paw.pos.copy(paw.spring.step(tuckHome, dt));
+      if (restOnBoard) {
+        const rest = this.desk.keyTopWorld('space', this.tmpV1);
+        rest.y += 0.045; // Keep the pad on the keycap without pressing it.
+        paw.pos.copy(paw.spring.step(rest, dt));
+      } else {
+        paw.pos.copy(paw.spring.step(tuckHome, dt));
+      }
       paw.last.copy(paw.pos);
     };
     updatePaw(this.paws.L, true);
@@ -2553,7 +2575,7 @@ export class KuroCatEngine3D {
       const tuck = pawTrack.tuckWeight;
       const onMouse = arm.s < 0 && mousing;
       const reach = arm.shoulder.distanceTo(arm.hand);
-      const lift = mix(0.24, 0.06, clamp((reach - 0.85) / 0.85, 0, 1)) * (1 - tuck * 0.65);
+      const lift = mix(this.personalDesk ? 0.12 : 0.24, 0.06, clamp((reach - 0.85) / 0.85, 0, 1)) * (1 - tuck * 0.65);
 
       this.tmpArmOff.set(
         arm.s * (onMouse ? 0.09 : 0.14 * (1 - tuck * 0.85)),

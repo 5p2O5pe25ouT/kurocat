@@ -858,8 +858,8 @@ export class KeyboardAndMouse3D {
 
     if (personal) {
       const side = isCatFacing ? 1 : -1;
-      this.boardGroup.position.set(0.21 * side, 0.015, 1.04);
-      this.mouseHome.set(-1.00 * side, 0.015, 0.83);
+      this.boardGroup.position.set(0.23 * side, 0.015, 0.98);
+      this.mouseHome.set(-0.86 * side, 0.015, 0.50);
     } else {
       this.boardGroup.position.set(0.24, 0.015, 1.08);
       this.mouseHome.set(is108 ? -1.46 : -1.16, 0.015, 0.96);
@@ -1070,7 +1070,7 @@ export class KeyboardAndMouse3D {
     this.deskGroup.updateMatrixWorld(false);
     this.mouseGroup.updateMatrixWorld(false);
     this.mouseShape.updateMatrixWorld(false);
-    return out.set(0, 0.115, -0.05).applyMatrix4(this.mouseShape.matrixWorld);
+    return out.set(0, this.personalDesk ? 0.19 : 0.115, -0.05).applyMatrix4(this.mouseShape.matrixWorld);
   }
 
   public update(
