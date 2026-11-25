@@ -42,7 +42,7 @@ export function drawDeskMouse(
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate((catFacing ? Math.PI : 0) - 0.16 + (leftPress - rightPress) * 0.055);
-  ctx.scale(1, 1 - Math.max(leftPress, rightPress) * 0.06);
+  ctx.scale(0.87, 0.87 * (1 - Math.max(leftPress, rightPress) * 0.06));
   const shell = new Path2D('M -15 -19 C -13 -30 6 -31 14 -19 C 20 -9 25 12 19 23 C 15 32 -10 34 -20 24 Q -27 19 -22 10 Q -15 1 -15 -19 Z');
   const body = ctx.createLinearGradient(-22, -16, 19, 25);
   body.addColorStop(0, '#535457'); body.addColorStop(0.43, '#37383b'); body.addColorStop(1, '#242528');

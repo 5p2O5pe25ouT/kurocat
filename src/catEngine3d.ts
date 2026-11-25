@@ -659,6 +659,7 @@ export class KuroCatEngine3D {
   private readonly fxList: Fx3D[] = [];
   private readonly petMeshes: THREE.Object3D[] = [];
   private readonly raycaster = new THREE.Raycaster();
+  private readonly hitNdc = new THREE.Vector2();
 
   // 240Hz Springs
   private readonly sShift = new Spring1D(0, 1.85, 0.72);
@@ -1914,6 +1915,11 @@ export class KuroCatEngine3D {
     this.lastMouse = this.elapsed;
     this.paws.L.lastActive = this.elapsed;
     this.desk.pulseScrollWheel();
+  }
+
+  public hitsCat(x: number, y: number): boolean {
+    this.raycaster.setFromCamera(this.hitNdc.set(x * 2 - 1, 1 - y * 2), this.camera);
+    return this.raycaster.intersectObjects(this.petMeshes, false).length > 0;
   }
 
   public onPointerMove(

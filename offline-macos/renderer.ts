@@ -45,6 +45,10 @@ function appearance(id: string, use3D: boolean): void {
   engine.start();
 }
 
+window.addEventListener('resize', () => {
+  if (engine instanceof KuroCatEngine3D) engine.resize();
+});
+
 function configureKeyboard(): void {
   engine.showKeyBubbles = practicing;
   engine.setTailKeyConfig(practicing ? 'smart' : 'off', []);
@@ -72,6 +76,14 @@ function tap(): void {
   lastTarget = alternateTarget ? 0x4d : 0x26;
   engine.onKeyDown(lastTarget, false, false);
   release = window.setTimeout(releasePaw, 80);
+}
+
+// Test the drawing itself so the clear area around a sleeping or moving cat stays click-through.
+function hit(x: number, y: number): boolean {
+  if (x < 0 || y < 0 || x >= 1 || y >= 1) return false;
+  if (engine instanceof KuroCatEngine3D) return engine.hitsCat(x, y);
+  const ctx = canvas2D.getContext('2d');
+  return Boolean(ctx && ctx.getImageData(Math.floor(x * canvas2D.width), Math.floor(y * canvas2D.height), 1, 1).data[3] > 96);
 }
 
 interface PointerSample {
@@ -106,4 +118,4 @@ function pointer(sample: PointerSample): void {
   if (sample.scrolled) engine.onMouseWheel();
 }
 
-Object.assign(window, { pet: { appearance, practice, key, tap, pointer, skins: HAND_DRAWN_CATS.map(({id, name}) => ({id, name})) } });
+Object.assign(window, { pet: { appearance, practice, key, tap, pointer, hit, skins: HAND_DRAWN_CATS.map(({id, name}) => ({id, name})) } });

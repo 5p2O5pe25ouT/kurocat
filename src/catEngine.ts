@@ -561,18 +561,18 @@ export class KuroCatEngine {
   private syncLayoutPositions(): void {
     const isBigFish = this.catBreed === 'dafeiyu';
     if (this.keyboardLayout === 'k98') {
-      this.logicalW = 510;
-      this.logicalH = 425;
-      this.catCenterX = 246;
-      this.catTopY = 54;
-      this.catBaseY = 281;
-      this.kbCenterX = this.keyboardOrientation === 'cat' ? 301 : 209;
-      this.kbCenterY = 315;
-      this.kbWidth = 276;
-      this.kbHeight = 80;
-      this.kbTiltRad = -0.028;
-      this.mouseBaseX = this.keyboardOrientation === 'cat' ? 145 : 365;
-      this.mouseBaseY = 278;
+      this.logicalW = 450;
+      this.logicalH = 435;
+      this.catCenterX = 211;
+      this.catTopY = 65;
+      this.catBaseY = 288;
+      this.kbCenterX = this.keyboardOrientation === 'cat' ? 240 : 210;
+      this.kbCenterY = 330;
+      this.kbWidth = 254;
+      this.kbHeight = 77;
+      this.kbTiltRad = (2.5 * Math.PI) / 180;
+      this.mouseBaseX = this.keyboardOrientation === 'cat' ? 92 : 358;
+      this.mouseBaseY = 288;
     } else if (this.keyboardLayout === '108') {
       this.logicalW = 540;
       this.logicalH = 456;

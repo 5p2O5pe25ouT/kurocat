@@ -858,8 +858,8 @@ export class KeyboardAndMouse3D {
 
     if (personal) {
       const side = isCatFacing ? 1 : -1;
-      this.boardGroup.position.set(0.32 * side, 0.015, 0.99);
-      this.mouseHome.set(-0.85 * side, 0.015, 0.66);
+      this.boardGroup.position.set(0.21 * side, 0.015, 1.04);
+      this.mouseHome.set(-1.00 * side, 0.015, 0.83);
     } else {
       this.boardGroup.position.set(0.24, 0.015, 1.08);
       this.mouseHome.set(is108 ? -1.46 : -1.16, 0.015, 0.96);

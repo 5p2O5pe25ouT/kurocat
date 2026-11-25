@@ -15,9 +15,10 @@ final class Pet: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSWindow
         config.websiteDataStore = .nonPersistent()
         return WKWebView(frame: .zero, configuration: config)
     }()
-    private let window = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 344, height: 310),
-                                 styleMask: [.borderless, .nonactivatingPanel],
-                                 backing: .buffered, defer: false)
+    private let window = PetPanel()
+    private let sizeLabel = NSTextField(labelWithString: "")
+    private var hitTestPending = false
+    private var nextHitTest: TimeInterval = 0
     private let status = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let defaults = UserDefaults.standard
     private var skins: [[String: String]] = []
@@ -43,10 +44,7 @@ final class Pet: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSWindow
         web.setValue(false, forKey: "drawsBackground")
         web.navigationDelegate = self
         window.contentView = web
-        if let screen = NSScreen.main {
-            window.setFrameOrigin(NSPoint(x: screen.visibleFrame.maxX - window.frame.width - 12,
-                                          y: screen.visibleFrame.minY + 12))
-        }
+        window.restorePlacement()
         status.button?.title = "🐈‍⬛"
         status.button?.toolTip = "KuroCat Offline"
         rebuildMenu()
@@ -113,6 +111,39 @@ final class Pet: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSWindow
         }
     }
 
+    func applicationDidChangeScreenParameters(_ notification: Notification) {
+        window.restorePlacement()
+    }
+
+    private func refreshDragRegion(at point: NSPoint, buttons: Int) {
+        guard !window.isDraggingPet else { return }
+        let frame = window.frame
+        guard frame.contains(point) else {
+            window.ignoresMouseEvents = true
+            return
+        }
+        let now = ProcessInfo.processInfo.systemUptime
+        guard buttons == 0, !hitTestPending,
+              point != previousMouse.point || now >= nextHitTest else { return }
+        hitTestPending = true
+        nextHitTest = now + 0.20
+        let args: [String: Any] = ["x": (point.x - frame.minX) / frame.width,
+                                   "y": (frame.maxY - point.y) / frame.height]
+        web.callAsyncJavaScript("return pet.hit(x, y)", arguments: args, in: nil, in: .page) { [weak self] result in
+            guard let self else { return }
+            self.hitTestPending = false
+            guard !self.window.isDraggingPet, NSEvent.pressedMouseButtons == 0 else { return }
+            let cursor = NSEvent.mouseLocation
+            guard self.window.frame == frame, frame.contains(cursor),
+                  hypot(point.x - cursor.x, point.y - cursor.y) < 5 else {
+                self.window.ignoresMouseEvents = true
+                self.nextHitTest = 0
+                return
+            }
+            self.window.ignoresMouseEvents = (try? result.get() as? Bool) != true
+        }
+    }
+
     private func count() -> UInt32 {
         CGEventSource.counterForEventType(.combinedSessionState, eventType: .keyDown)
     }
@@ -127,6 +158,7 @@ final class Pet: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSWindow
         }
 
         let mouse = MouseSample()
+        refreshDragRegion(at: mouse.point, buttons: mouse.buttons)
         let old = previousMouse
         guard mouse != old else { return }
         previousMouse = mouse
@@ -197,6 +229,19 @@ final class Pet: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSWindow
     private func rebuildMenu() {
         let menu = NSMenu()
         menu.addItem(withTitle: "打开打字窗口", action: #selector(openTypingWindow), keyEquivalent: "").target = self
+        let sizeItem = NSMenuItem()
+        let controls = NSView(frame: NSRect(x: 0, y: 0, width: 218, height: 54))
+        sizeLabel.stringValue = "桌宠大小  \(window.scalePercent)%"
+        sizeLabel.frame = NSRect(x: 16, y: 29, width: 186, height: 18)
+        controls.addSubview(sizeLabel)
+        let slider = NSSlider(value: Double(window.scalePercent), minValue: 20, maxValue: 150,
+                              target: self, action: #selector(changeSize(_:)))
+        slider.frame = NSRect(x: 14, y: 6, width: 190, height: 20)
+        slider.isContinuous = true
+        slider.setAccessibilityLabel("桌宠大小，百分比")
+        controls.addSubview(slider)
+        sizeItem.view = controls
+        menu.addItem(sizeItem)
         menu.addItem(.separator())
         for option in skins {
             guard let id = option["id"], let name = option["name"] else { continue }
@@ -211,6 +256,11 @@ final class Pet: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSWindow
         mode.state = use3D ? .on : .off
         menu.addItem(withTitle: "退出 KuroCat Offline", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         status.menu = menu
+    }
+
+    @objc private func changeSize(_ sender: NSSlider) {
+        window.resize(to: Int(sender.doubleValue.rounded()))
+        sizeLabel.stringValue = "桌宠大小  \(window.scalePercent)%"
     }
 
     @objc private func selectSkin(_ sender: NSMenuItem) {
