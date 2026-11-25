@@ -48,8 +48,8 @@ function tap(): void {
   // Fixed drawing targets alternate regardless of which physical key was pressed.
   releasePaw();
   alternateTarget = !alternateTarget;
-  // F and semicolon lie on opposite sides of the compact board's visual centre.
-  lastTarget = alternateTarget ? 0x46 : 0xba;
+  // M and Up are on opposite sides of the board, in the two rows nearest the cat.
+  lastTarget = alternateTarget ? 0x4d : 0x26;
   engine.onKeyDown(lastTarget, false, false);
   release = window.setTimeout(releasePaw, 80);
 }

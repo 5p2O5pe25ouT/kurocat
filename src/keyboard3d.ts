@@ -848,7 +848,7 @@ export class KeyboardAndMouse3D {
     this.mouseLabelLMat.needsUpdate = true;
     this.mouseLabelRMat.needsUpdate = true;
 
-    const U = is108 ? 0.122 : 0.150;
+    const U = personal ? 0.09 : is108 ? 0.122 : 0.150;
     const CAP = U * 0.87;
     const W = layout.totalUnits * U + 0.14;
     const D = layout.totalRows * U + 0.14;
@@ -856,8 +856,14 @@ export class KeyboardAndMouse3D {
     this.boardH = 0.112;
     this.capH = is108 ? 0.048 : 0.056;
 
-    this.boardGroup.position.set(personal && !isCatFacing ? -0.20 : 0.24, 0.015, 1.08);
-    this.mouseHome.set(personal && !isCatFacing ? 1.46 : is108 ? -1.46 : -1.16, 0.015, 0.96);
+    if (personal) {
+      const side = isCatFacing ? 1 : -1;
+      this.boardGroup.position.set(0.32 * side, 0.015, 0.99);
+      this.mouseHome.set(-0.85 * side, 0.015, 0.66);
+    } else {
+      this.boardGroup.position.set(0.24, 0.015, 1.08);
+      this.mouseHome.set(is108 ? -1.46 : -1.16, 0.015, 0.96);
+    }
 
     // Soft grounded desk shadow under keyboard
     const kbShadowGeo = new THREE.PlaneGeometry(W * 1.18, D * 1.38);

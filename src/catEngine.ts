@@ -559,16 +559,16 @@ export class KuroCatEngine {
     if (this.keyboardLayout === 'k98') {
       this.logicalW = 510;
       this.logicalH = 425;
-      this.catCenterX = 255;
+      this.catCenterX = 246;
       this.catTopY = 54;
       this.catBaseY = 281;
-      this.kbCenterX = this.keyboardOrientation === 'cat' ? 296 : 214;
-      this.kbCenterY = 327;
-      this.kbWidth = 376;
-      this.kbHeight = 108;
+      this.kbCenterX = this.keyboardOrientation === 'cat' ? 301 : 209;
+      this.kbCenterY = 315;
+      this.kbWidth = 276;
+      this.kbHeight = 80;
       this.kbTiltRad = -0.028;
-      this.mouseBaseX = this.keyboardOrientation === 'cat' ? 59 : 451;
-      this.mouseBaseY = 339;
+      this.mouseBaseX = this.keyboardOrientation === 'cat' ? 145 : 365;
+      this.mouseBaseY = 278;
     } else if (this.keyboardLayout === '108') {
       this.logicalW = 540;
       this.logicalH = 456;
