@@ -1,4 +1,3 @@
-import { k98Colors } from './k98';
 import * as THREE from 'three';
 import {
   getKeyboardLayout,
@@ -345,7 +344,6 @@ function getKeycapAtlas(
 
     g.fillStyle =
       item.accent === 'orange' ? '#f59b2e' : item.accent === 'mod' ? '#e6e4db' : '#f9f8f3';
-    if (layoutId === 'k98') g.fillStyle = k98Colors[item.accent].top;
     g.fillRect(ox, oy, CELL, CELL);
 
     // Sculpted concave PBT keycap sheen
@@ -363,7 +361,6 @@ function getKeycapAtlas(
       const fontSize = len >= 4 ? 22 : len === 3 ? 26 : len === 2 ? 32 : 39;
       g.font = `700 ${fontSize}px "Segoe UI", system-ui, sans-serif`;
       g.fillStyle = item.accent === 'orange' ? '#ffffff' : '#2b2d34';
-      if (layoutId === 'k98') g.fillStyle = k98Colors[item.accent].legend;
       g.textAlign = 'center';
       g.textBaseline = 'middle';
       g.fillText(item.label, 0, 1.5);
@@ -566,7 +563,6 @@ export class KeyboardAndMouse3D {
   private rightBtnColor = new THREE.Color('#ff7b3b');
   private boardH = 0.115;
   private capH = 0.056;
-  private readonly tmpTint = new THREE.Color();
   private boardWidth = 2.4;
 
   // Scratch objects (zero per-frame GC allocations)
@@ -596,7 +592,7 @@ export class KeyboardAndMouse3D {
   private privacyPlate: THREE.Mesh | null = null;
   private privacyMat: THREE.MeshBasicMaterial;
 
-  constructor(scene: THREE.Scene, private readonly personalDesk = false) {
+  constructor(scene: THREE.Scene) {
     // Open-ended 4-sided beveled keycap frustum (no invisible underside!)
     this.capSideGeo = new THREE.CylinderGeometry(Math.SQRT1_2 * 0.80, Math.SQRT1_2, 1, 4, 1, true);
     this.capSideGeo.rotateY(Math.PI / 4);
@@ -781,20 +777,6 @@ export class KeyboardAndMouse3D {
       lblL,
       lblR,
     );
-    if (personalDesk) {
-      lblL.visible = lblR.visible = false;
-      baseSkirt.material.color.set('#333438');
-      dome.scale.set(MW * 0.95, MH * 1.35, ML * 1.10);
-      wheel.scale.multiplyScalar(1.25);
-      wheel.position.y += 0.033;
-      const rest = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 12), new THREE.MeshBasicMaterial({ color: '#36373b' }));
-      rest.scale.set(0.115, 0.045, 0.178);
-      rest.position.set(0.115, 0.025, -0.014);
-      const thumbWheel = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.082, 16), this.wheelMat);
-      thumbWheel.rotation.z = Math.PI / 2;
-      thumbWheel.position.set(0.113, 0.102, 0.055);
-      this.mouseShape.add(rest, thumbWheel);
-    }
     this.mouseShape.userData.leftBtn = leftBtn;
     this.mouseShape.userData.rightBtn = rightBtn;
     this.deskGroup.add(this.mouseGroup);
@@ -813,7 +795,7 @@ export class KeyboardAndMouse3D {
   public setStyle(style: '3d' | '2d'): void {
     const is3D = style === '3d';
     this.mouseBodyMat.vertexColors = is3D;
-    this.mouseBodyMat.color.set(this.personalDesk ? '#414246' : is3D ? '#ffffff' : '#f4f4f0');
+    this.mouseBodyMat.color.set(is3D ? '#ffffff' : '#f4f4f0');
     this.mouseBodyMat.needsUpdate = true;
   }
 
@@ -837,8 +819,7 @@ export class KeyboardAndMouse3D {
     this.boardDisposables.length = 0;
 
     const layout = getKeyboardLayout(layoutId);
-    const personal = layoutId === 'k98';
-    const is108 = layoutId === '108' || personal;
+    const is108 = layoutId === '108';
     const isCatFacing = orientation === 'cat';
 
     // Sync mouse orientation (180° cat-facing vs 0° viewer-facing)
@@ -848,7 +829,7 @@ export class KeyboardAndMouse3D {
     this.mouseLabelLMat.needsUpdate = true;
     this.mouseLabelRMat.needsUpdate = true;
 
-    const U = personal ? 0.09 : is108 ? 0.122 : 0.150;
+    const U = is108 ? 0.122 : 0.150;
     const CAP = U * 0.87;
     const W = layout.totalUnits * U + 0.14;
     const D = layout.totalRows * U + 0.14;
@@ -856,14 +837,8 @@ export class KeyboardAndMouse3D {
     this.boardH = 0.112;
     this.capH = is108 ? 0.048 : 0.056;
 
-    if (personal) {
-      const side = isCatFacing ? 1 : -1;
-      this.boardGroup.position.set(0.23 * side, 0.015, 0.98);
-      this.mouseHome.set(-0.86 * side, 0.015, 0.50);
-    } else {
-      this.boardGroup.position.set(0.24, 0.015, 1.08);
-      this.mouseHome.set(is108 ? -1.46 : -1.16, 0.015, 0.96);
-    }
+    this.boardGroup.position.set(0.24, 0.015, 1.08);
+    this.mouseHome.set(is108 ? -1.46 : -1.16, 0.015, 0.96);
 
     // Soft grounded desk shadow under keyboard
     const kbShadowGeo = new THREE.PlaneGeometry(W * 1.18, D * 1.38);
@@ -877,9 +852,9 @@ export class KeyboardAndMouse3D {
     const bezelGeo = makeRoundedSlabGeo(W - 0.014, D - 0.014, 0.014, 0.060, this.boardH - 0.008);
     const plateGeo = makeRoundedSlabGeo(W - 0.062, D - 0.062, 0.008, 0.044, this.boardH + 0.004);
     const chassisGeo = mergeStaticGeometries([
-      { geo: baseGeo, color: personal ? '#b8b8b3' : '#202229' },
-      { geo: bezelGeo, color: personal ? '#efeee6' : '#2c2f38' },
-      { geo: plateGeo, color: personal ? '#c2c3bb' : '#181a20' },
+      { geo: baseGeo, color: '#202229' },
+      { geo: bezelGeo, color: '#2c2f38' },
+      { geo: plateGeo, color: '#181a20' },
     ]);
     baseGeo.dispose();
     bezelGeo.dispose();
@@ -887,14 +862,6 @@ export class KeyboardAndMouse3D {
     const chassisMesh = new THREE.Mesh(chassisGeo, this.chassisMat);
     this.boardDisposables.push(chassisGeo);
     this.boardGroup.add(kbShadow, chassisMesh);
-    if (personal) {
-      const strip = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.004, 0.016),
-        new THREE.MeshBasicMaterial({ color: '#64ed86' }));
-      const facing = isCatFacing ? -1 : 1;
-      strip.position.set((W / 2 - 0.25) * facing, this.boardH + 0.016, (-D / 2 + 0.023) * facing);
-      this.boardGroup.add(strip);
-      this.boardDisposables.push(strip.geometry, strip.material);
-    }
 
     // Single Texture Atlas + 2 InstancedMeshes for ALL 67 or 108 keycaps (2 draw calls total!)
     const keyCount = layout.keys.length;
@@ -944,7 +911,7 @@ export class KeyboardAndMouse3D {
         spec.accent === 'orange' ? 'orange' : spec.accent === 'mod' ? 'mod' : 'base';
       sideInst.setColorAt(
         i,
-        personal ? this.tmpTint.set(k98Colors[accent].side) : accent === 'orange'
+        accent === 'orange'
           ? this.sideColorOrange
           : accent === 'mod'
             ? this.sideColorMod
@@ -1070,7 +1037,7 @@ export class KeyboardAndMouse3D {
     this.deskGroup.updateMatrixWorld(false);
     this.mouseGroup.updateMatrixWorld(false);
     this.mouseShape.updateMatrixWorld(false);
-    return out.set(0, this.personalDesk ? 0.19 : 0.115, -0.05).applyMatrix4(this.mouseShape.matrixWorld);
+    return out.set(0, 0.115, -0.05).applyMatrix4(this.mouseShape.matrixWorld);
   }
 
   public update(
@@ -1154,7 +1121,7 @@ export class KeyboardAndMouse3D {
     if (leftBtn) leftBtn.visible = this.leftPress > 0.005;
     if (rightBtn) rightBtn.visible = this.rightPress > 0.005;
 
-    this.wheelMat.color.set(this.personalDesk ? '#c9cbce' : '#555966').lerp(this.hitColor, this.wheelGlow);
+    this.wheelMat.color.set('#555966').lerp(this.hitColor, this.wheelGlow);
 
     const anyPress = Math.max(this.leftPress, this.rightPress);
     this.mouseShape.scale.set(1 + 0.03 * anyPress, 1 - 0.10 * anyPress, 1);

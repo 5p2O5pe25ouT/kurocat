@@ -40,7 +40,7 @@ final class TypingPad: NSView {
         0x39: NSEvent.ModifierFlags.capsLock.rawValue
     ]
 
-    // Physical macOS key positions mapped to the existing K98 renderer.
+    // Physical macOS key positions mapped to the upstream keyboard renderer.
     private static let keycaps: [UInt16: Int] = [
         0x00: 0x41, // A
         0x0B: 0x42, // B

@@ -1,4 +1,3 @@
-import { k98Colors, drawDeskMouse } from './k98';
 import {
   KEYBOARD_KEYS_65,
   KEYBOARD_KEYS_108,
@@ -467,8 +466,7 @@ export class KuroCatEngine {
 
     const layout = getKeyboardLayout(this.keyboardLayout);
     const isCatFacing = this.keyboardOrientation === 'cat';
-    const personal = this.keyboardLayout === 'k98';
-    const is108 = this.keyboardLayout === '108' || personal;
+    const is108 = this.keyboardLayout === '108';
     const rowH = innerH / layout.totalRows;
     const unitW = innerW / layout.totalUnits;
     const gap = is108 ? 0.85 : 0.9;
@@ -560,20 +558,7 @@ export class KuroCatEngine {
 
   private syncLayoutPositions(): void {
     const isBigFish = this.catBreed === 'dafeiyu';
-    if (this.keyboardLayout === 'k98') {
-      this.logicalW = 450;
-      this.logicalH = 435;
-      this.catCenterX = 211;
-      this.catTopY = 65;
-      this.catBaseY = 288;
-      this.kbCenterX = this.keyboardOrientation === 'cat' ? 240 : 210;
-      this.kbCenterY = 330;
-      this.kbWidth = 254;
-      this.kbHeight = 77;
-      this.kbTiltRad = (2.5 * Math.PI) / 180;
-      this.mouseBaseX = this.keyboardOrientation === 'cat' ? 92 : 358;
-      this.mouseBaseY = 288;
-    } else if (this.keyboardLayout === '108') {
+    if (this.keyboardLayout === '108') {
       this.logicalW = 540;
       this.logicalH = 456;
       this.catCenterX = 278;
@@ -636,7 +621,7 @@ export class KuroCatEngine {
   }
 
   public setKeyboardConfig(layout: KeyboardLayoutId, orientation: KeyboardOrientation): void {
-    const nextLayout: KeyboardLayoutId = layout === 'k98' || layout === '108' ? layout : '65';
+    const nextLayout: KeyboardLayoutId = layout === '108' ? '108' : '65';
     const nextOrientation: KeyboardOrientation = orientation === 'viewer' ? 'viewer' : 'cat';
     const layoutChanged = this.keyboardLayout !== nextLayout;
     this.keyboardLayout = nextLayout;
@@ -1275,7 +1260,7 @@ export class KuroCatEngine {
       return;
     }
 
-    const splitCol = this.keyboardLayout === 'k98' ? midCol :
+    const splitCol =
       this.keyboardLayout === '108'
         ? isCatFacing
           ? 12.2
@@ -3513,11 +3498,6 @@ export class KuroCatEngine {
   private drawMiniMouse(ctx: CanvasRenderingContext2D): void {
     const mx = this.mouseBaseX + this.mouseOffsetX;
     const my = this.mouseBaseY + this.mouseOffsetY + this.deskHopY * 1.35;
-    if (this.keyboardLayout === 'k98') {
-      drawDeskMouse(ctx, mx, my, this.keyboardOrientation === 'cat',
-        this.mouseLeftPress, this.mouseRightPress, Math.max(this.mouseMiddlePress, this.mouseScrollFlash));
-      return;
-    }
     const rx = 18.5;
     const ry = 23.0;
     const lPress = this.mouseLeftPress;
@@ -3659,8 +3639,7 @@ export class KuroCatEngine {
   private drawKeyboard(ctx: CanvasRenderingContext2D): void {
     const layout = getKeyboardLayout(this.keyboardLayout);
     const isCatFacing = this.keyboardOrientation === 'cat';
-    const personal = this.keyboardLayout === 'k98';
-    const is108 = this.keyboardLayout === '108' || personal;
+    const is108 = this.keyboardLayout === '108';
     const padX = 7;
     const padY = 6;
     const innerW = this.kbWidth - padX * 2;
@@ -3725,10 +3704,6 @@ export class KuroCatEngine {
       } else if (isTailSelected) {
         topColor = pickerAccentTop;
         sideColor = pickerAccentSide;
-      } else if (personal) {
-        const cap = k98Colors[key.accent === 'normal' || !key.accent ? 'base' : key.accent];
-        topColor = cap.top;
-        sideColor = cap.side;
       } else if (key.accent === 'orange') {
         topColor = '#f4a524';
         sideColor = '#c27a10';
@@ -3792,7 +3767,6 @@ export class KuroCatEngine {
           : key.accent === 'orange'
             ? '#ffffff'
             : '#2c2f36';
-        if (personal) targetCtx.fillStyle = k98Colors[key.accent === 'normal' || !key.accent ? 'base' : key.accent].legend;
         targetCtx.textAlign = 'center';
         targetCtx.textBaseline = 'middle';
         targetCtx.fillText(legend, 0, 0);
@@ -3835,8 +3809,8 @@ export class KuroCatEngine {
           cg.fill();
           cg.restore();
 
-          cg.fillStyle = personal ? '#ebebe4' : '#24262c';
-          cg.strokeStyle = personal ? '#a9aaa3' : '#363840';
+          cg.fillStyle = '#24262c';
+          cg.strokeStyle = '#363840';
           cg.lineWidth = 1.1;
           this.trapezoidPath(cg, topHalfW, botHalfW, -halfH, halfH, 6.5);
           cg.fill();
@@ -3848,19 +3822,6 @@ export class KuroCatEngine {
 
           for (const key of layout.keys) {
             drawSingleKey(cg, key, 0, false, false, pickerAccentTop, pickerAccentSide);
-          }
-          if (personal) {
-            cg.save();
-            if (isCatFacing) cg.rotate(Math.PI);
-            cg.fillStyle = '#518157';
-            cg.fillRect(topHalfW - 49, -halfH + 1, 39, 2.1);
-            cg.fillStyle = '#64ed86';
-            cg.fillRect(topHalfW - 48, -halfH + 1, 36, 1.2);
-            cg.fillStyle = '#62676a';
-            cg.font = 'bold 4.2px system-ui';
-            cg.textAlign = 'center';
-            cg.fillText('K98', innerW * 0.273, halfH * 0.5);
-            cg.restore();
           }
           cg.restore();
           this.kbCacheKey = nextKey;

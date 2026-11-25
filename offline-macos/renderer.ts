@@ -27,7 +27,7 @@ function appearance(id: string, use3D: boolean): void {
   const wantsModel = use3D && !modelUnavailable;
   if (wantsModel && !model) {
     try {
-      model = new KuroCatEngine3D(canvas3D, { embedded: true, personalDesk: true });
+      model = new KuroCatEngine3D(canvas3D, { embedded: true });
     } catch {
       modelUnavailable = true;
     }
@@ -38,7 +38,7 @@ function appearance(id: string, use3D: boolean): void {
   if (activeModel) activeModel.setCatSkin(skin);
   else classic.setCatAppearance(skin.id, skin);
   engine = activeModel ?? classic;
-  engine.setKeyboardConfig('k98', 'cat');
+  engine.setKeyboardConfig('65', 'cat');
   configureKeyboard();
   engine.setFpsCap(30);
   engine.resize();
@@ -72,8 +72,8 @@ function tap(): void {
   // Fixed drawing targets alternate regardless of which physical key was pressed.
   releasePaw();
   alternateTarget = !alternateTarget;
-  // M and Up are on opposite sides of the board, in the two rows nearest the cat.
-  lastTarget = alternateTarget ? 0x4d : 0x26;
+  // The two fixed targets sit on opposite sides of the original compact keyboard.
+  lastTarget = alternateTarget ? 0x46 : 0x4a;
   engine.onKeyDown(lastTarget, false, false);
   release = window.setTimeout(releasePaw, 80);
 }
