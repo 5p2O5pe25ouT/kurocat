@@ -35,10 +35,14 @@ export const k98Colors = {
 };
 
 // Coordinates follow the top of the shell, with the thumb rest on the left.
-export function drawDeskMouse(ctx: CanvasRenderingContext2D, x: number, y: number, catFacing: boolean): void {
+export function drawDeskMouse(
+  ctx: CanvasRenderingContext2D, x: number, y: number, catFacing: boolean,
+  leftPress: number, rightPress: number, scroll: number,
+): void {
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate((catFacing ? Math.PI : 0) - 0.16);
+  ctx.rotate((catFacing ? Math.PI : 0) - 0.16 + (leftPress - rightPress) * 0.055);
+  ctx.scale(1, 1 - Math.max(leftPress, rightPress) * 0.06);
   const shell = new Path2D('M -15 -19 C -13 -30 6 -31 14 -19 C 20 -9 25 12 19 23 C 15 32 -10 34 -20 24 Q -27 19 -22 10 Q -15 1 -15 -19 Z');
   const body = ctx.createLinearGradient(-22, -16, 19, 25);
   body.addColorStop(0, '#535457'); body.addColorStop(0.43, '#37383b'); body.addColorStop(1, '#242528');
@@ -52,7 +56,8 @@ export function drawDeskMouse(ctx: CanvasRenderingContext2D, x: number, y: numbe
   const wheel = ctx.createLinearGradient(-2,-15,4,-15);
   wheel.addColorStop(0,'#76777a'); wheel.addColorStop(.4,'#ededeb'); wheel.addColorStop(1,'#818388');
   ctx.fillStyle = wheel; ctx.beginPath(); ctx.roundRect(-1.7,-20.5,5.6,10,2.5); ctx.fill();
-  ctx.strokeStyle='#797b7f'; ctx.lineWidth=.65;
+  ctx.strokeStyle = scroll > 0.25 ? '#39b4aa' : '#797b7f';
+  ctx.lineWidth = 0.65;
   for(let k=-19; k < -11; k+=2) { ctx.beginPath();ctx.moveTo(-1.1,k);ctx.lineTo(3.6,k);ctx.stroke(); }
   ctx.save(); ctx.translate(-12.4,-3);ctx.rotate(.52);
   ctx.fillStyle='#b9bab9';ctx.beginPath();ctx.roundRect(-4.4,-2.2,8.8,4.4,1.6);ctx.fill();

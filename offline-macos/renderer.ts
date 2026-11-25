@@ -54,4 +54,36 @@ function tap(): void {
   release = window.setTimeout(releasePaw, 80);
 }
 
-Object.assign(window, { pet: { appearance, tap, skins: HAND_DRAWN_CATS.map(({id, name}) => ({id, name})) } });
+interface PointerSample {
+  moved: boolean;
+  nx: number;
+  ny: number;
+  rx: number;
+  ry: number;
+  buttons: number;
+  before: number;
+  leftClick: boolean;
+  rightClick: boolean;
+  scrolled: boolean;
+}
+
+function pointer(sample: PointerSample): void {
+  if (sample.moved) {
+    engine.onGlobalMouseMove(sample.nx, sample.ny);
+    if (engine === classic) classic.onPointerSpeedSample(sample.nx, sample.ny);
+    const overCat = Math.hypot((sample.rx - 0.5) / 0.16, (sample.ry - 0.46) / 0.23) <= 1;
+    engine.onWindowCursor(sample.rx, sample.ry, overCat);
+  }
+  const buttons = ['left', 'right', 'middle'] as const;
+  for (const [index, button] of buttons.entries()) {
+    const mask = 1 << index;
+    const wasDown = Boolean(sample.before & mask);
+    const isDown = Boolean(sample.buttons & mask);
+    const clicked = (index === 0 && sample.leftClick) || (index === 1 && sample.rightClick);
+    if ((!wasDown && isDown) || clicked) engine.onMouseDown(button);
+    if ((wasDown || clicked) && !isDown) engine.onMouseUp(button);
+  }
+  if (sample.scrolled) engine.onMouseWheel();
+}
+
+Object.assign(window, { pet: { appearance, tap, pointer, skins: HAND_DRAWN_CATS.map(({id, name}) => ({id, name})) } });

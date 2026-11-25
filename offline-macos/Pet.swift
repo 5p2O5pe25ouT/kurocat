@@ -1,6 +1,14 @@
 import AppKit
 import WebKit
 
+private struct MouseSample: Equatable {
+    let point = NSEvent.mouseLocation
+    let buttons = NSEvent.pressedMouseButtons & 7
+    let left = CGEventSource.counterForEventType(.combinedSessionState, eventType: .leftMouseDown)
+    let right = CGEventSource.counterForEventType(.combinedSessionState, eventType: .rightMouseDown)
+    let wheel = CGEventSource.counterForEventType(.combinedSessionState, eventType: .scrollWheel)
+}
+
 final class Pet: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     let web: WKWebView = {
         let config = WKWebViewConfiguration()
@@ -14,6 +22,7 @@ final class Pet: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     private let defaults = UserDefaults.standard
     private var skins: [[String: String]] = []
     private var timer: Timer?
+    private var previousMouse = MouseSample()
     private var previousCount: UInt32 = 0
     private var ready = false
     private var reloadedAfterCrash = false
@@ -90,9 +99,10 @@ final class Pet: NSObject, NSApplicationDelegate, WKNavigationDelegate {
             guard let self, case .success = result else { return }
             self.ready = true
             self.previousCount = self.count()
+            self.previousMouse = MouseSample()
             if self.timer?.isValid != true {
-                let timer = Timer(timeInterval: 0.065, repeats: true) { [weak self] _ in self?.poll() }
-                timer.tolerance = 0.015
+                let timer = Timer(timeInterval: 1.0 / 30, repeats: true) { [weak self] _ in self?.poll() }
+                timer.tolerance = 0.008
                 RunLoop.main.add(timer, forMode: .common)
                 self.timer = timer
             }
@@ -105,9 +115,33 @@ final class Pet: NSObject, NSApplicationDelegate, WKNavigationDelegate {
 
     private func poll() {
         let current = count()
-        defer { previousCount = current }
-        guard ready, current != previousCount else { return }
-        web.evaluateJavaScript("pet.tap()", completionHandler: nil)
+        guard ready else { return }
+        if current != previousCount {
+            previousCount = current
+            web.evaluateJavaScript("pet.tap()", completionHandler: nil)
+        }
+
+        let mouse = MouseSample()
+        let old = previousMouse
+        guard mouse != old else { return }
+        previousMouse = mouse
+        let point = mouse.point
+        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }) ?? window.screen else { return }
+        let display = screen.frame
+        let panel = window.frame
+        let sample: [String: Any] = [
+            "moved": point != old.point,
+            "nx": (point.x - display.minX) / display.width,
+            "ny": (display.maxY - point.y) / display.height,
+            "rx": (point.x - panel.minX) / panel.width,
+            "ry": (panel.maxY - point.y) / panel.height,
+            "buttons": mouse.buttons,
+            "before": old.buttons,
+            "leftClick": mouse.left != old.left,
+            "rightClick": mouse.right != old.right,
+            "scrolled": mouse.wheel != old.wheel
+        ]
+        web.callAsyncJavaScript("pet.pointer(sample)", arguments: ["sample": sample], in: nil, in: .page, completionHandler: nil)
     }
 
     private func rebuildMenu() {

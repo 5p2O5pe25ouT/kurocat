@@ -3510,7 +3510,8 @@ export class KuroCatEngine {
     const mx = this.mouseBaseX + this.mouseOffsetX;
     const my = this.mouseBaseY + this.mouseOffsetY + this.deskHopY * 1.35;
     if (this.keyboardLayout === 'k98') {
-      drawDeskMouse(ctx, mx, my, this.keyboardOrientation === 'cat');
+      drawDeskMouse(ctx, mx, my, this.keyboardOrientation === 'cat',
+        this.mouseLeftPress, this.mouseRightPress, Math.max(this.mouseMiddlePress, this.mouseScrollFlash));
       return;
     }
     const rx = 18.5;
