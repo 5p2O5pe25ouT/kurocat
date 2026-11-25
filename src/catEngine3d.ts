@@ -1699,13 +1699,25 @@ export class KuroCatEngine3D {
   public setPrivacyMode(active: boolean): void {
     this.privacyMode = active;
     if (active) {
-      this.desk.releaseAllKeys();
-      this.paws.L.down = false;
-      this.paws.R.down = false;
-      this.tailTap.down = false;
+      this.clearKeyboardFeedback();
       this.isCross = false;
       this.curiousUntil = -100;
     }
+  }
+
+  public clearKeyboardFeedback(): void {
+    this.desk.releaseAllKeys(true);
+    this.paws.L.down = this.paws.R.down = false;
+    this.paws.L.keyId = this.paws.R.keyId = null;
+    this.tailTap.down = false;
+    this.tailTap.keyId = null;
+    this.tailTap.reach = 0;
+    for (const popup of this.popups) {
+      this.scene.remove(popup.sprite);
+      popup.sprite.material.dispose();
+    }
+    this.popups.length = 0;
+    this.wakeRendering();
   }
 
   public addOrbitDelta(dAzDeg: number, dElDeg: number): void {

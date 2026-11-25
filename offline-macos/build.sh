@@ -33,7 +33,7 @@ cp src-tauri/icons/icon.icns "$resources/"
 cp LICENSE "$resources/KuroCat-LICENSE.txt"
 cp "$stage/three/LICENSE" "$resources/Three-LICENSE.txt"
 arch=$(uname -m)
-swiftc -O -target "$arch-apple-macos14.0" offline-macos/{Pet,main}.swift -o "$app/Contents/MacOS/KuroCatOffline"
+swiftc -O -target "$arch-apple-macos14.0" offline-macos/{Pet,TypingPad,main}.swift -o "$app/Contents/MacOS/KuroCatOffline"
 codesign --force --sign - --entitlements offline-macos/entitlements.plist "$app"
 codesign --verify --strict "$app"
 mv "$app" "$destination"

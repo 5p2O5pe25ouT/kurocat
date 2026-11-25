@@ -1032,10 +1032,11 @@ export class KeyboardAndMouse3D {
     }
   }
 
-  public releaseAllKeys(): void {
+  public releaseAllKeys(immediate = false): void {
     for (const k of this.keys.values()) {
-      if (k.down) {
+      if (k.down || (immediate && (k.depth || k.glow))) {
         k.down = false;
+        if (immediate) { k.depth = 0; k.glow = 0; }
         this.activeKeys.add(k);
       }
     }

@@ -276,17 +276,21 @@ export class KuroCatEngine {
     this.wakeRendering();
     this.privacyMode = active;
     this.dafeiyu?.onPrivacyModeChanged(active);
-    if (active) {
-      this.heldKeys.clear();
-      this.catTail.heldVks.clear();
-      this.catTailHeldAt.clear();
-      this.catTail.active = false;
-      this.bubbles.length = 0;
-      for (const anim of this.keyAnims.values()) {
-        anim.pressed = false;
-        anim.pressAmount = 0;
-      }
+    if (active) this.clearKeyboardFeedback();
+  }
+
+  public clearKeyboardFeedback(): void {
+    this.heldKeys.clear();
+    this.catTail.heldVks.clear();
+    this.catTailHeldAt.clear();
+    this.catTail.active = false;
+    this.catTail.reach = 0;
+    this.bubbles.length = 0;
+    for (const anim of this.keyAnims.values()) {
+      anim.pressed = false;
+      anim.pressAmount = 0;
     }
+    this.wakeRendering();
   }
 
   public onPrivacyTyping(): void {

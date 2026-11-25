@@ -8,6 +8,7 @@ const classic = new KuroCatEngine(canvas2D, { embedded: true });
 let model: KuroCatEngine3D | undefined;
 let engine: KuroCatEngine | KuroCatEngine3D = classic;
 let alternateTarget = false;
+let practicing = false;
 let modelUnavailable = false;
 let release: number | undefined;
 let lastTarget = 0;
@@ -20,6 +21,7 @@ function releasePaw(): void {
 
 function appearance(id: string, use3D: boolean): void {
   releasePaw();
+  engine.clearKeyboardFeedback();
   engine.stop();
   const skin = HAND_DRAWN_CATS.find(cat => cat.id === id) ?? HAND_DRAWN_CATS[0];
   const wantsModel = use3D && !modelUnavailable;
@@ -37,14 +39,32 @@ function appearance(id: string, use3D: boolean): void {
   else classic.setCatAppearance(skin.id, skin);
   engine = activeModel ?? classic;
   engine.setKeyboardConfig('k98', 'cat');
-  engine.showKeyBubbles = false;
-  engine.setTailKeyConfig('off', []);
+  configureKeyboard();
   engine.setFpsCap(30);
   engine.resize();
   engine.start();
 }
 
+function configureKeyboard(): void {
+  engine.showKeyBubbles = practicing;
+  engine.setTailKeyConfig(practicing ? 'smart' : 'off', []);
+}
+
+function practice(enabled: boolean): void {
+  releasePaw();
+  engine.clearKeyboardFeedback();
+  practicing = enabled;
+  configureKeyboard();
+}
+
+function key(vk: number, down: boolean, repeating: boolean): void {
+  if (!practicing) return;
+  if (down) engine.onKeyDown(vk, repeating);
+  else engine.onKeyUp(vk);
+}
+
 function tap(): void {
+  if (practicing) return;
   // Fixed drawing targets alternate regardless of which physical key was pressed.
   releasePaw();
   alternateTarget = !alternateTarget;
@@ -86,4 +106,4 @@ function pointer(sample: PointerSample): void {
   if (sample.scrolled) engine.onMouseWheel();
 }
 
-Object.assign(window, { pet: { appearance, tap, pointer, skins: HAND_DRAWN_CATS.map(({id, name}) => ({id, name})) } });
+Object.assign(window, { pet: { appearance, practice, key, tap, pointer, skins: HAND_DRAWN_CATS.map(({id, name}) => ({id, name})) } });

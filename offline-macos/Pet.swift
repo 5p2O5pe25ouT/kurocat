@@ -9,7 +9,7 @@ private struct MouseSample: Equatable {
     let wheel = CGEventSource.counterForEventType(.combinedSessionState, eventType: .scrollWheel)
 }
 
-final class Pet: NSObject, NSApplicationDelegate, WKNavigationDelegate {
+final class Pet: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSWindowDelegate {
     let web: WKWebView = {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent()
@@ -24,6 +24,9 @@ final class Pet: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     private var timer: Timer?
     private var previousMouse = MouseSample()
     private var previousCount: UInt32 = 0
+    private var typingWindow: NSWindow?
+    private let typingPad = TypingPad()
+    private var displayingKeys = false
     private var ready = false
     private var reloadedAfterCrash = false
     private var skin: String { defaults.string(forKey: "skin") ?? "black" }
@@ -98,6 +101,7 @@ final class Pet: NSObject, NSApplicationDelegate, WKNavigationDelegate {
                                 in: nil, in: .page) { [weak self] result in
             guard let self, case .success = result else { return }
             self.ready = true
+            self.setKeyDisplay(self.typingPad.canShowKeys, force: true)
             self.previousCount = self.count()
             self.previousMouse = MouseSample()
             if self.timer?.isValid != true {
@@ -116,9 +120,10 @@ final class Pet: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     private func poll() {
         let current = count()
         guard ready else { return }
+        setKeyDisplay(typingPad.canShowKeys)
         if current != previousCount {
             previousCount = current
-            web.evaluateJavaScript("pet.tap()", completionHandler: nil)
+            if !displayingKeys { web.evaluateJavaScript("pet.tap()", completionHandler: nil) }
         }
 
         let mouse = MouseSample()
@@ -144,8 +149,55 @@ final class Pet: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         web.callAsyncJavaScript("pet.pointer(sample)", arguments: ["sample": sample], in: nil, in: .page, completionHandler: nil)
     }
 
+    private func setKeyDisplay(_ enabled: Bool, force: Bool = false) {
+        guard ready, force || enabled != displayingKeys else { return }
+        displayingKeys = enabled
+        previousCount = count()
+        web.evaluateJavaScript(enabled ? "pet.practice(true)" : "pet.practice(false)", completionHandler: nil)
+    }
+
+    func windowDidResignKey(_ notification: Notification) { setKeyDisplay(false) }
+    func windowWillClose(_ notification: Notification) { setKeyDisplay(false) }
+    func applicationDidResignActive(_ notification: Notification) { setKeyDisplay(false) }
+
+    @objc func openTypingWindow() {
+        if typingWindow == nil {
+            let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 360, height: 120),
+                                 styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+            panel.title = "KuroCat 打字窗口"
+            panel.isReleasedWhenClosed = false
+            panel.contentView = typingPad
+            panel.delegate = self
+            let hint = NSTextField(wrappingLabelWithString: "在这里敲键，看看猫爪和尾巴。切到其他窗口后，字母会消失。")
+            hint.font = .systemFont(ofSize: 16)
+            hint.translatesAutoresizingMaskIntoConstraints = false
+            typingPad.addSubview(hint)
+            NSLayoutConstraint.activate([
+                hint.leadingAnchor.constraint(equalTo: typingPad.leadingAnchor, constant: 24),
+                hint.trailingAnchor.constraint(equalTo: typingPad.trailingAnchor, constant: -24),
+                hint.centerYAnchor.constraint(equalTo: typingPad.centerYAnchor)
+            ])
+            typingPad.keyChanged = { [weak self] vk, down, repeating in
+                guard let self, self.ready, self.typingPad.canShowKeys else { return }
+                self.setKeyDisplay(true)
+                self.web.callAsyncJavaScript("pet.key(vk, down, repeating)", arguments: [
+                    "vk": vk, "down": down, "repeating": repeating
+                ], in: nil, in: .page, completionHandler: nil)
+            }
+            typingPad.lostFocus = { [weak self] in self?.setKeyDisplay(false) }
+            panel.center()
+            typingWindow = panel
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        typingWindow?.makeKeyAndOrderFront(nil)
+        typingWindow?.makeFirstResponder(typingPad)
+        setKeyDisplay(typingPad.canShowKeys)
+    }
+
     private func rebuildMenu() {
         let menu = NSMenu()
+        menu.addItem(withTitle: "打开打字窗口", action: #selector(openTypingWindow), keyEquivalent: "").target = self
+        menu.addItem(.separator())
         for option in skins {
             guard let id = option["id"], let name = option["name"] else { continue }
             let item = menu.addItem(withTitle: name, action: #selector(selectSkin(_:)), keyEquivalent: "")
