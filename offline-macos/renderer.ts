@@ -1,0 +1,57 @@
+import { KuroCatEngine } from '../src/catEngine';
+import { KuroCatEngine3D } from '../src/catEngine3d';
+import { HAND_DRAWN_CATS } from '../src/handDrawnCats';
+
+const canvas2D = document.querySelector<HTMLCanvasElement>('#classic')!;
+const canvas3D = document.querySelector<HTMLCanvasElement>('#model')!;
+const classic = new KuroCatEngine(canvas2D, { embedded: true });
+let model: KuroCatEngine3D | undefined;
+let engine: KuroCatEngine | KuroCatEngine3D = classic;
+let alternateTarget = false;
+let modelUnavailable = false;
+let release: number | undefined;
+let lastTarget = 0;
+
+function releasePaw(): void {
+  window.clearTimeout(release);
+  if (lastTarget) engine.onKeyUp(lastTarget);
+  lastTarget = 0;
+}
+
+function appearance(id: string, use3D: boolean): void {
+  releasePaw();
+  engine.stop();
+  const skin = HAND_DRAWN_CATS.find(cat => cat.id === id) ?? HAND_DRAWN_CATS[0];
+  const wantsModel = use3D && !modelUnavailable;
+  if (wantsModel && !model) {
+    try {
+      model = new KuroCatEngine3D(canvas3D, { embedded: true, personalDesk: true });
+    } catch {
+      modelUnavailable = true;
+    }
+  }
+  const activeModel = wantsModel ? model : undefined;
+  canvas2D.hidden = Boolean(activeModel);
+  canvas3D.hidden = !activeModel;
+  if (activeModel) activeModel.setCatSkin(skin);
+  else classic.setCatAppearance(skin.id, skin);
+  engine = activeModel ?? classic;
+  engine.setKeyboardConfig('k98', 'cat');
+  engine.showKeyBubbles = false;
+  engine.setTailKeyConfig('off', []);
+  engine.setFpsCap(30);
+  engine.resize();
+  engine.start();
+}
+
+function tap(): void {
+  // Fixed drawing targets alternate regardless of which physical key was pressed.
+  releasePaw();
+  alternateTarget = !alternateTarget;
+  // F and semicolon lie on opposite sides of the compact board's visual centre.
+  lastTarget = alternateTarget ? 0x46 : 0xba;
+  engine.onKeyDown(lastTarget, false, false);
+  release = window.setTimeout(releasePaw, 80);
+}
+
+Object.assign(window, { pet: { appearance, tap, skins: HAND_DRAWN_CATS.map(({id, name}) => ({id, name})) } });

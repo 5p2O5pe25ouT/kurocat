@@ -779,7 +779,7 @@ export class KuroCatEngine3D {
   private sleepTrimSent = false;
   public onDeepSleep: (() => void) | null = null;
 
-  constructor(canvas: HTMLCanvasElement, options?: { embedded?: boolean }) {
+  constructor(canvas: HTMLCanvasElement, options?: { embedded?: boolean; personalDesk?: boolean }) {
     this.canvas = canvas;
     this.embedded = Boolean(options?.embedded);
     this.renderer = new THREE.WebGLRenderer({
@@ -795,7 +795,7 @@ export class KuroCatEngine3D {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     this.camera = new THREE.PerspectiveCamera(22, 1.35, 0.1, 100);
-    this.desk = new KeyboardAndMouse3D(this.scene);
+    this.desk = new KeyboardAndMouse3D(this.scene, options?.personalDesk);
     this.pawMat = this.furSystem.createMaterial('PAW');
 
     // 1) Original KuroCat Continuous One-Piece Mochi-Pear Silhouette (exact BODY_SLICES proportions!)
@@ -1763,7 +1763,7 @@ export class KuroCatEngine3D {
     }, 180);
   }
 
-  public onKeyDown(vk: number, repeat = false): void {
+  public onKeyDown(vk: number, repeat = false, highlightKey = true): void {
     if (this.privacyMode) {
       if (!repeat) {
         this.sSquash.kick(0.25);
@@ -1806,7 +1806,7 @@ export class KuroCatEngine3D {
     const keyWorld = this.desk.keyTopWorld(k.spec.id, this.tmpV1);
     paw.dur = clamp(paw.pos.distanceTo(keyWorld) * 0.085, 0.048, 0.095);
     paw.down = true;
-    this.desk.setKeyDown(k.spec.id, true);
+    if (highlightKey) this.desk.setKeyDown(k.spec.id, true);
 
     this.sSquash.kick(0.32);
     this.sPitch.kick(0.75);

@@ -1,3 +1,4 @@
+import { k98Colors, drawDeskMouse } from './k98';
 import {
   KEYBOARD_KEYS_65,
   KEYBOARD_KEYS_108,
@@ -10,6 +11,9 @@ import {
 import { catAudio } from './audio';
 import { resolveCustomSkin, type CatSkinConfig, type ResolvedSkin } from './catSkins';
 import { DaFeiYuRenderer, type DaFeiYuLayout } from './dafeiyuRenderer';
+
+// The offline bundle omits the optional whale renderer and its sprite assets.
+declare const KUROCAT_CATS_ONLY: boolean;
 
 export const LOGICAL_W = 420;
 export const LOGICAL_H = 440;
@@ -247,7 +251,9 @@ export class KuroCatEngine {
   private tailPickerHoverId: string | null = null;
   private renderScale = 1.0;
   private embedded = false;
-  private dafeiyu = new DaFeiYuRenderer();
+  private dafeiyu = typeof KUROCAT_CATS_ONLY !== 'undefined' && KUROCAT_CATS_ONLY
+    ? undefined
+    : new DaFeiYuRenderer();
   private catTail = {
     heldVks: new Set<number>(),
     targetX: 320,
@@ -269,7 +275,7 @@ export class KuroCatEngine {
   public setPrivacyMode(active: boolean): void {
     this.wakeRendering();
     this.privacyMode = active;
-    this.dafeiyu.onPrivacyModeChanged(active);
+    this.dafeiyu?.onPrivacyModeChanged(active);
     if (active) {
       this.heldKeys.clear();
       this.catTail.heldVks.clear();
@@ -286,7 +292,7 @@ export class KuroCatEngine {
   public onPrivacyTyping(): void {
     this.privacyTypingAt = performance.now();
     this.wakeRendering(this.privacyTypingAt);
-    if (this.catBreed === 'dafeiyu') {
+    if (this.catBreed === 'dafeiyu' && this.dafeiyu) {
       this.dafeiyu.onPrivacyTyping();
     }
   }
@@ -355,7 +361,7 @@ export class KuroCatEngine {
       anim.lastHitAt = now;
     }
     const targetPt = this.getTailTargetPoint(spec);
-    if (this.catBreed === 'dafeiyu') {
+    if (this.catBreed === 'dafeiyu' && this.dafeiyu) {
       this.dafeiyu.triggerTailPreview(targetPt, this.buildDaFeiYuLayout());
       return;
     }
@@ -457,7 +463,8 @@ export class KuroCatEngine {
 
     const layout = getKeyboardLayout(this.keyboardLayout);
     const isCatFacing = this.keyboardOrientation === 'cat';
-    const is108 = this.keyboardLayout === '108';
+    const personal = this.keyboardLayout === 'k98';
+    const is108 = this.keyboardLayout === '108' || personal;
     const rowH = innerH / layout.totalRows;
     const unitW = innerW / layout.totalUnits;
     const gap = is108 ? 0.85 : 0.9;
@@ -517,7 +524,7 @@ export class KuroCatEngine {
     let leftHeld = 0;
     let rightHeld = 0;
     let rightBusy = false;
-    if (this.catBreed === 'dafeiyu') {
+    if (this.catBreed === 'dafeiyu' && this.dafeiyu) {
       const busy = this.dafeiyu.getHandBusyState(now);
       leftHeld = busy.leftHeld;
       rightHeld = busy.rightHeld;
@@ -549,7 +556,20 @@ export class KuroCatEngine {
 
   private syncLayoutPositions(): void {
     const isBigFish = this.catBreed === 'dafeiyu';
-    if (this.keyboardLayout === '108') {
+    if (this.keyboardLayout === 'k98') {
+      this.logicalW = 510;
+      this.logicalH = 425;
+      this.catCenterX = 255;
+      this.catTopY = 54;
+      this.catBaseY = 281;
+      this.kbCenterX = this.keyboardOrientation === 'cat' ? 296 : 214;
+      this.kbCenterY = 327;
+      this.kbWidth = 376;
+      this.kbHeight = 108;
+      this.kbTiltRad = -0.028;
+      this.mouseBaseX = this.keyboardOrientation === 'cat' ? 59 : 451;
+      this.mouseBaseY = 339;
+    } else if (this.keyboardLayout === '108') {
       this.logicalW = 540;
       this.logicalH = 456;
       this.catCenterX = 278;
@@ -580,9 +600,9 @@ export class KuroCatEngine {
 
   public setCatAppearance(breedId: string, skin?: CatSkinConfig | null): void {
     if (breedId !== 'dafeiyu' && this.catBreed === 'dafeiyu') {
-      this.dafeiyu.releaseSprites();
+      this.dafeiyu?.releaseSprites();
     }
-    if (breedId === 'dafeiyu') {
+    if (breedId === 'dafeiyu' && this.dafeiyu) {
       this.catBreed = 'dafeiyu';
       this.customSkin = null;
       catAudio.setPurrIntensity(0);
@@ -612,7 +632,7 @@ export class KuroCatEngine {
   }
 
   public setKeyboardConfig(layout: KeyboardLayoutId, orientation: KeyboardOrientation): void {
-    const nextLayout: KeyboardLayoutId = layout === '108' ? '108' : '65';
+    const nextLayout: KeyboardLayoutId = layout === 'k98' || layout === '108' ? layout : '65';
     const nextOrientation: KeyboardOrientation = orientation === 'viewer' ? 'viewer' : 'cat';
     const layoutChanged = this.keyboardLayout !== nextLayout;
     this.keyboardLayout = nextLayout;
@@ -896,7 +916,7 @@ export class KuroCatEngine {
   }
 
   public releaseCachedResources(): void {
-    this.dafeiyu.releaseSprites();
+    this.dafeiyu?.releaseSprites();
     if (this.kbCacheCanvas) {
       this.kbCacheCanvas.width = 0;
       this.kbCacheCanvas.height = 0;
@@ -1128,7 +1148,7 @@ export class KuroCatEngine {
 
   // ---- Input event handlers ----
 
-  public onKeyDown(vk: number, repeat: boolean): void {
+  public onKeyDown(vk: number, repeat: boolean, highlightKey = true): void {
     if (this.privacyMode) {
       if (!repeat) this.onPrivacyTyping();
       return;
@@ -1139,7 +1159,7 @@ export class KuroCatEngine {
     this.wakeCat(now, repeat ? 'gentle' : 'abrupt');
 
     const anim = this.keyAnims.get(spec.id);
-    if (anim) {
+    if (highlightKey && anim) {
       anim.pressed = true;
       anim.pressAmount = 1;
       anim.lastHitAt = now;
@@ -1179,7 +1199,7 @@ export class KuroCatEngine {
     const rawKeyPt = this.getKeyWorldCenter(spec);
     const useTail = this.shouldUseTailForKey(spec, rawKeyPt, activelyMousing, prevAnyKeyAt, now);
 
-    if (this.catBreed === 'dafeiyu') {
+    if (this.catBreed === 'dafeiyu' && this.dafeiyu) {
       const dafeiyuLayout = this.buildDaFeiYuLayout();
       const dafeiyuMouseBusy =
         dafeiyuLayout.mouseLeft ||
@@ -1251,7 +1271,7 @@ export class KuroCatEngine {
       return;
     }
 
-    const splitCol =
+    const splitCol = this.keyboardLayout === 'k98' ? midCol :
       this.keyboardLayout === '108'
         ? isCatFacing
           ? 12.2
@@ -1336,7 +1356,7 @@ export class KuroCatEngine {
   }
 
   public onKeyUp(vk: number): void {
-    this.dafeiyu.onKeyUp(vk);
+    this.dafeiyu?.onKeyUp(vk);
     this.heldKeys.delete(vk);
     if (this.catTail.heldVks.has(vk)) {
       this.catTail.heldVks.delete(vk);
@@ -1473,8 +1493,8 @@ export class KuroCatEngine {
 
     this.lastMouseMoveAt = now;
     this.lastMouseClickAt = now;
-    this.dafeiyu.resetLeftHandForMouse();
-    this.dafeiyu.onMouseAction(now);
+    this.dafeiyu?.resetLeftHandForMouse();
+    this.dafeiyu?.onMouseAction(now);
     this.leftPaw.mode = 'mouse';
     this.leftPaw.impactSquash = 0.72;
     this.leftPaw.lastActiveAt = now;
@@ -1500,8 +1520,8 @@ export class KuroCatEngine {
     this.mouseScrollFlash = 1;
     this.lastMouseMoveAt = now;
     this.lastMouseClickAt = now;
-    this.dafeiyu.resetLeftHandForMouse();
-    this.dafeiyu.onMouseAction(now);
+    this.dafeiyu?.resetLeftHandForMouse();
+    this.dafeiyu?.onMouseAction(now);
     this.leftPaw.mode = 'mouse';
     this.leftPaw.lastActiveAt = now;
   }
@@ -1982,7 +2002,7 @@ export class KuroCatEngine {
       : 0;
     this.earPerkSpring.step(earTarget, dt);
 
-    if (this.catBreed === 'dafeiyu') {
+    if (this.catBreed === 'dafeiyu' && this.dafeiyu) {
       this.dafeiyu.update(dt, now, this.buildDaFeiYuLayout());
     } else {
       // Update plush cat tail key-patting physics for keys near the tail
@@ -2297,7 +2317,7 @@ export class KuroCatEngine {
     const breath = Math.sin(this.elapsed * breathFreq) * (1.0 + this.sleepAmount * 0.65);
     const purrShift = this.squintAmount > 0.4 ? Math.sin(this.elapsed * 22) * 0.45 * this.squintAmount : 0;
 
-    if (this.catBreed === 'dafeiyu') {
+    if (this.catBreed === 'dafeiyu' && this.dafeiyu) {
       const now = performance.now();
       const layout = this.buildDaFeiYuLayout();
       this.dafeiyu.renderBody(ctx, now, layout);
@@ -3489,6 +3509,10 @@ export class KuroCatEngine {
   private drawMiniMouse(ctx: CanvasRenderingContext2D): void {
     const mx = this.mouseBaseX + this.mouseOffsetX;
     const my = this.mouseBaseY + this.mouseOffsetY + this.deskHopY * 1.35;
+    if (this.keyboardLayout === 'k98') {
+      drawDeskMouse(ctx, mx, my, this.keyboardOrientation === 'cat');
+      return;
+    }
     const rx = 18.5;
     const ry = 23.0;
     const lPress = this.mouseLeftPress;
@@ -3630,7 +3654,8 @@ export class KuroCatEngine {
   private drawKeyboard(ctx: CanvasRenderingContext2D): void {
     const layout = getKeyboardLayout(this.keyboardLayout);
     const isCatFacing = this.keyboardOrientation === 'cat';
-    const is108 = this.keyboardLayout === '108';
+    const personal = this.keyboardLayout === 'k98';
+    const is108 = this.keyboardLayout === '108' || personal;
     const padX = 7;
     const padY = 6;
     const innerW = this.kbWidth - padX * 2;
@@ -3695,6 +3720,10 @@ export class KuroCatEngine {
       } else if (isTailSelected) {
         topColor = pickerAccentTop;
         sideColor = pickerAccentSide;
+      } else if (personal) {
+        const cap = k98Colors[key.accent === 'normal' || !key.accent ? 'base' : key.accent];
+        topColor = cap.top;
+        sideColor = cap.side;
       } else if (key.accent === 'orange') {
         topColor = '#f4a524';
         sideColor = '#c27a10';
@@ -3758,6 +3787,7 @@ export class KuroCatEngine {
           : key.accent === 'orange'
             ? '#ffffff'
             : '#2c2f36';
+        if (personal) targetCtx.fillStyle = k98Colors[key.accent === 'normal' || !key.accent ? 'base' : key.accent].legend;
         targetCtx.textAlign = 'center';
         targetCtx.textBaseline = 'middle';
         targetCtx.fillText(legend, 0, 0);
@@ -3800,8 +3830,8 @@ export class KuroCatEngine {
           cg.fill();
           cg.restore();
 
-          cg.fillStyle = '#24262c';
-          cg.strokeStyle = '#363840';
+          cg.fillStyle = personal ? '#ebebe4' : '#24262c';
+          cg.strokeStyle = personal ? '#a9aaa3' : '#363840';
           cg.lineWidth = 1.1;
           this.trapezoidPath(cg, topHalfW, botHalfW, -halfH, halfH, 6.5);
           cg.fill();
@@ -3813,6 +3843,19 @@ export class KuroCatEngine {
 
           for (const key of layout.keys) {
             drawSingleKey(cg, key, 0, false, false, pickerAccentTop, pickerAccentSide);
+          }
+          if (personal) {
+            cg.save();
+            if (isCatFacing) cg.rotate(Math.PI);
+            cg.fillStyle = '#518157';
+            cg.fillRect(topHalfW - 49, -halfH + 1, 39, 2.1);
+            cg.fillStyle = '#64ed86';
+            cg.fillRect(topHalfW - 48, -halfH + 1, 36, 1.2);
+            cg.fillStyle = '#62676a';
+            cg.font = 'bold 4.2px system-ui';
+            cg.textAlign = 'center';
+            cg.fillText('K98', innerW * 0.273, halfH * 0.5);
+            cg.restore();
           }
           cg.restore();
           this.kbCacheKey = nextKey;

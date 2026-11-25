@@ -1,4 +1,6 @@
-export type KeyboardLayoutId = '65' | '108';
+import { k98Keys } from './k98';
+
+export type KeyboardLayoutId = '65' | '108' | 'k98';
 
 export interface KeySpec {
   id: string;
@@ -228,6 +230,7 @@ export const KEYBOARD_KEYS_108: KeySpec[] = [
 export const KEYBOARD_KEYS = KEYBOARD_KEYS_65;
 
 export const KEYBOARD_LAYOUTS: Record<KeyboardLayoutId, KeyboardLayoutDef> = {
+  k98: { id: 'k98', totalUnits: 20.25, totalRows: 6.22, keys: k98Keys(KEYBOARD_KEYS_108) },
   '65': {
     id: '65',
     totalUnits: 15,
@@ -243,11 +246,12 @@ export const KEYBOARD_LAYOUTS: Record<KeyboardLayoutId, KeyboardLayoutDef> = {
 };
 
 const vkLookups: Record<KeyboardLayoutId, Map<number, KeySpec>> = {
+  k98: new Map<number, KeySpec>(),
   '65': new Map<number, KeySpec>(),
   '108': new Map<number, KeySpec>(),
 };
 
-for (const layoutId of ['65', '108'] as const) {
+for (const layoutId of ['65', '108', 'k98'] as const) {
   for (const key of KEYBOARD_LAYOUTS[layoutId].keys) {
     for (const vk of key.vkCodes) {
       vkLookups[layoutId].set(vk, key);

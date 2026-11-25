@@ -1,3 +1,22 @@
+# KuroCat Offline · macOS 个人版
+
+这个分支从 KuroCat v5.1.1 构建独立的 macOS 桌宠。默认使用手绘外观，菜单栏的黑猫图标可以切换六款猫咪、切换 3D 或退出。键盘和鼠标按 LINGBAO K98 和右手双滚轮鼠标绘制。
+
+桌宠只比较 macOS 当前会话的按键事件总数。计数变化时通知画面拍爪，系统键值、扫描码和输入内容都不会进入渲染页面。应用只加载包内资源，未编入 MCP、OBS、原版的全局输入钩子或更新器。WebKit 在此沙盒配置下启动需要客户端网络 entitlement，页面使用内容拦截规则和 CSP 限制外部请求。
+
+在 macOS 14 或更高版本，准备 Xcode Command Line Tools、Node.js 和 Bun 后运行：
+
+```sh
+./offline-macos/build.sh
+open "dist/KuroCat Offline.app"
+```
+
+构建脚本按上游锁文件校验 Three.js。已有对应的依赖压缩包时可通过 `KUROCAT_THREE_ARCHIVE` 指定本地路径。产物为本机架构、本地签名的应用。安装后可通过菜单栏退出，再将应用移入废纸篓卸载。
+
+---
+
+以下为上游项目说明。此分支的离线版请使用上面的构建入口。
+
 # 🐈‍⬛ KuroCat — Open-Source Desktop Typing Cat Pet · 桌面打字小黑猫伴侣
 
 <p align="center">
